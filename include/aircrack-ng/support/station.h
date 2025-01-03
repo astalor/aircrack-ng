@@ -51,6 +51,34 @@ struct WPS_info
 	unsigned char state; /* Current WPS state */
 	unsigned char ap_setup_locked; /* AP setup locked */
 	unsigned int meth; /* WPS Config Methods */
+	char *wps_version;
+    char *device_name;    
+    char *device_password_id;            
+    char *device_manuf;     
+    char *device_model;      
+	char *device_model_number;     
+    char *device_serial_number;    
+	
+	unsigned char *device_attributes; // Device Attributes
+    size_t device_attributes_len; // Length of Device Attributes
+	
+	
+	uint16_t primary_device_category;    /* Category ID */
+    uint16_t primary_device_subcategory; /* Subcategory ID */
+    uint32_t primary_device_manufacturer_id; /* Manufacturer ID */
+	
+	uint16_t secondary_device_category;    /* Category ID */
+    uint16_t secondary_device_subcategory; /* Subcategory ID */
+    uint32_t secondary_device_manufacturer_id; /* Manufacturer ID */
+	
+	char *selected_registrar_config_methods;
+	char *config_methods; /* Human-readable WPS Config Methods */
+	char *uuid_registrar;
+	unsigned char association_state; // Association State
+	unsigned char config_error; // Configuration Error
+	unsigned char *public_key; // Public Key
+    size_t public_key_len; // Length of the Public Key
+	
 };
 
 #define MAX_AC_MCS_INDEX 8
@@ -132,6 +160,7 @@ struct AP_info
 	int nb_dataps; /* number of data packets/sec*/
 	struct timeval tv; /* time for data per second */
 	char * manuf; /* the access point's manufacturer */
+	char * manuf_packet; /* the access point's manufacturer */
 	unsigned long long timestamp; /* Timestamp to calculate uptime   */
 
 	uint8_t bssid[6]; /* access point MAC address     */
@@ -180,6 +209,13 @@ struct AP_info
 	int marked;
 	int marked_color;
 	struct WPS_info wps;
+	
+	/* Manufacturer and Device Details */
+    char *serial_number;          /* AP's serial number */
+    char *uuid_enrollee;          /* AP's UUID Enrollee */
+    char *response_type;          /* WPS response type */
+    char *selected_registrar;     /* Selected registrar */
+    char *config_methods;         /* Supported configuration methods */
 };
 
 /** linked list of detected clients */
@@ -192,6 +228,7 @@ struct ST_info
 	struct WPA_hdsk wpa; /* WPA handshake data        */
 
 	char * manuf; /* the client's manufacturer */
+	char * manuf_packet; /* the client's manufacturer */
 
 	time_t tinit, tlast; /* first and last time seen  */
 	unsigned long nb_pkt; /* total number of packets   */

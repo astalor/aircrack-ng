@@ -313,6 +313,34 @@ static void color_off(void)
 	textcolor_fg(TEXT_WHITE);
 }
 
+/**
+ * Extracts a null-terminated string from the packet data.
+ * 
+ * @param p Pointer to the start of the string in the packet.
+ * @param len Length of the string to extract.
+ * @return Dynamically allocated string or NULL on failure.
+ */
+char* extract_string(unsigned char *p, int len) {
+    if (len <= 0 || len > 256) return NULL; // Prevent excessively long strings
+
+    char *str = (char *)malloc(len + 1);
+    if (!str) return NULL;
+
+    memcpy(str, p, len);
+    str[len] = '\0';
+
+    /* Optional: Trim trailing whitespace or control characters */
+    for (int i = len - 1; i >= 0; i--) {
+        if (str[i] == ' ' || str[i] == '\n' || str[i] == '\r') {
+            str[i] = '\0';
+        } else {
+            break;
+        }
+    }
+
+    return str;
+}
+
 static void color_on(void)
 {
 	struct AP_info * ap_cur;
@@ -801,7 +829,7 @@ static struct oui * load_oui_file(void)
 static const char usage[] =
 
 	"\n"
-	"  %s - (C) 2006-2022 Thomas d\'Otreppe\n"
+	"  %s - (C) 2006-2022 Thomas d\'Otreppe (modfied by me)\n"
 	"  https://www.aircrack-ng.org\n"
 	"\n"
 	"  usage: airodump-ng <options> <interface>[,<interface>,...]\n"
@@ -1497,6 +1525,26 @@ static int dump_add_packet(unsigned char * h80211,
 		ap_cur->ac_channel.split_chan = 0;
 		ap_cur->ac_channel.mhz_160_chan = 0;
 		ap_cur->ac_channel.wave_2 = 0;
+		
+		ap_cur->wps.wps_version = NULL;
+		ap_cur->wps.device_name = NULL;
+		ap_cur->wps.device_password_id = NULL;
+		ap_cur->wps.device_manuf = NULL;
+		ap_cur->wps.device_model = NULL;
+		ap_cur->wps.device_model_number = NULL;
+		ap_cur->wps.device_serial_number = NULL;
+		ap_cur->wps.uuid_registrar = NULL;
+		ap_cur->wps.association_state = 0;
+		ap_cur->wps.config_error = 0;
+		ap_cur->wps.public_key = NULL;
+		ap_cur->wps.secondary_device_category = 0;
+		ap_cur->wps.secondary_device_subcategory = 0;
+		ap_cur->wps.secondary_device_manufacturer_id = 0;
+		ap_cur->wps.config_methods = NULL;
+		ap_cur->wps.selected_registrar_config_methods = NULL;
+		ap_cur->wps.device_attributes = NULL;
+		ap_cur->wps.device_attributes_len = 0;
+		
 		memset(ap_cur->ac_channel.mcs_index, 0, MAX_AC_MCS_INDEX);
 	}
 
@@ -2339,17 +2387,87 @@ skip_probe:
 							ap_cur->wps.version = p[4];
 							break;
 						case 0x1011: // Device Name
+						if (sublen >= 3) { // Length includes Type and Length fields
+							free(ap_cur->wps.device_name); // Free previous allocation if any
+							ap_cur->wps.device_name = extract_string(p + 4, sublen - 2);
+						}
+							break;
 						case 0x1012: // Device Password ID
+							if (sublen >= 3) { // Assuming Password ID is 1 byte
+								free(ap_cur->wps.device_password_id); // Free previous allocation if any
+								// Assuming it's a numeric ID; convert to string
+								ap_cur->wps.device_password_id = malloc(4); // e.g., "123"
+								if (ap_cur->wps.device_password_id) {
+									snprintf(ap_cur->wps.device_password_id, 4, "%d", p[4]);
+								}
+							}
+							break;
 						case 0x1021: // Manufacturer
+							if (sublen >= 3) {
+								free(ap_cur->wps.device_manuf); // Free previous allocation if any
+								ap_cur->wps.device_manuf = extract_string(p + 4, sublen - 2);
+							}
+							break;
 						case 0x1023: // Model
+							if (sublen >= 3) {
+								free(ap_cur->wps.device_model); // Free previous allocation if any
+								ap_cur->wps.device_model = extract_string(p + 4, sublen - 2);
+							}
+							break;
 						case 0x1024: // Model Number
+							if (sublen >= 3) {
+								free(ap_cur->wps.device_model_number); // Free previous allocation if any
+								ap_cur->wps.device_model_number = extract_string(p + 4, sublen - 2);
+							}
+							break;
 						case 0x103b: // Response Type
 						case 0x103c: // RF Bands
 						case 0x1041: // Selected Registrar
+							if (sublen >= 3) { // Adjust length check based on actual data
+								free(ap_cur->selected_registrar); // Assuming you have this field in AP_info
+								ap_cur->selected_registrar = extract_string(p + 4, sublen - 2);
+							}
+							break;
 						case 0x1042: // Serial Number
+							if (sublen >= 3) {
+								free(ap_cur->wps.device_serial_number); // Free previous allocation if any
+								ap_cur->wps.device_serial_number = extract_string(p + 4, sublen - 2);
+							}
+							break;
+						case 0x1043: // UUID Registrar
+							if (sublen >= 18) { // Type (2) + Length (2) + UUID (16)
+								free(ap_cur->wps.uuid_registrar); // Free previous allocation if any
+								ap_cur->wps.uuid_registrar = malloc(33); // 16 bytes * 2 chars + null terminator
+								if (ap_cur->wps.uuid_registrar) {
+									for (int i = 0; i < 16; i++) {
+										sprintf(&ap_cur->wps.uuid_registrar[i * 2], "%02X", p[4 + i]);
+									}
+									ap_cur->wps.uuid_registrar[32] = '\0';
+								}
+							}
 							break;
 						case 0x1044: // WPS State
 							ap_cur->wps.state = p[4];
+							break;
+						case 0x1045: // Association State
+							if (sublen >= 3) { // Type (2) + Length (1)
+								ap_cur->wps.association_state = p[4];
+							}
+							break;
+						case 0x1046: // Configuration Error
+							if (sublen >= 3) { // Type (2) + Length (1)
+								ap_cur->wps.config_error = p[4];
+							}
+							break;
+						case 0x1048: // Public Key
+							if (sublen >= 4) { // Type (2) + Length (2) + at least some data
+								free(ap_cur->wps.public_key); // Free previous allocation if any
+								ap_cur->wps.public_key_len = sublen - 2;
+								ap_cur->wps.public_key = malloc(ap_cur->wps.public_key_len);
+								if (ap_cur->wps.public_key) {
+									memcpy(ap_cur->wps.public_key, p + 4, ap_cur->wps.public_key_len);
+								}
+							}
 							break;
 						case 0x1047: // UUID Enrollee
 						case 0x1049: // Vendor Extension
@@ -2370,6 +2488,36 @@ skip_probe:
 							}
 							break;
 						case 0x1054: // Primary Device Type
+							if (sublen >= 8) { // Ensure there are enough bytes for category, subcategory, and manufacturer ID
+								// Extract Category (2 bytes)
+								ap_cur->wps.primary_device_category = (p[4] << 8) | p[5];
+								
+								// Extract Subcategory (2 bytes)
+								ap_cur->wps.primary_device_subcategory = (p[6] << 8) | p[7];
+								
+								// Extract Manufacturer ID (4 bytes)
+								ap_cur->wps.primary_device_manufacturer_id = 
+									(p[8] << 24) | (p[9] << 16) | (p[10] << 8) | p[11];
+							}
+							break;
+						case 0x1055: // Secondary Device Type
+							if (sublen >= 8) { // Type (2) + Length (2) + Value (6)
+								
+								ap_cur->wps.secondary_device_category = (p[4] << 8) | p[5];
+								ap_cur->wps.secondary_device_subcategory = (p[6] << 8) | p[7];
+								ap_cur->wps.secondary_device_manufacturer_id = 
+									(p[8] << 24) | (p[9] << 16) | (p[10] << 8) | p[11];
+							}
+							break;
+						case 0x1056: // Device Attributes
+							if (sublen >= 4) { // Type (2) + Length (2) + at least some data
+								free(ap_cur->wps.device_attributes); // Free previous allocation if any
+								ap_cur->wps.device_attributes_len = sublen - 2;
+								ap_cur->wps.device_attributes = malloc(ap_cur->wps.device_attributes_len);
+								if (ap_cur->wps.device_attributes) {
+									memcpy(ap_cur->wps.device_attributes, p + 4, ap_cur->wps.device_attributes_len);
+								}
+							}
 							break;
 						case 0x1057: // AP Setup Locked
 							ap_cur->wps.ap_setup_locked = p[4];
@@ -2377,6 +2525,55 @@ skip_probe:
 						case 0x1008: // Config Methods
 						case 0x1053: // Selected Registrar Config Methods
 							ap_cur->wps.meth = (p[4] << 8) + p[5];
+							
+							if (sublen >= 4) { // Ensure there are at least 2 bytes for config methods
+								// Extract the Config Methods bitmask (2 bytes, network byte order)
+								unsigned int s_reg_meth = (p[4] << 8) | p[5];
+								
+								// Convert the bitmask to a human-readable string
+								free(ap_cur->wps.selected_registrar_config_methods); // Free previous allocation if any
+								ap_cur->wps.selected_registrar_config_methods = malloc(256); // Allocate sufficient space
+								if (ap_cur->wps.selected_registrar_config_methods) {
+									ap_cur->wps.selected_registrar_config_methods[0] = '\0'; // Initialize as empty string
+									uint16_t meth = s_reg_meth;
+									
+									// Define supported config methods based on WPS specification
+									typedef struct {
+										uint16_t bit;
+										const char *name;
+									} ConfigMethod;
+									
+									ConfigMethod methods[] = {
+										{ 0x0001, "Physical Push Button" },
+										{ 0x0002, "Physical Push Button Config" },
+										{ 0x0004, "Electronic Push Button" },
+										{ 0x0008, "Keypad" },
+										{ 0x0010, "Display" },
+										{ 0x0020, "Extensible Display" },
+										{ 0x0040, "Label" },
+										{ 0x0080, "Out of Band" },
+										{ 0x0100, "NFC Interface" },
+										{ 0x0200, "USB Interface" },
+										{ 0x0400, "Near Field Communication (NFC)" },
+										{ 0x0800, "PIN Display" },
+										// Add more methods as defined in the WPS spec if needed
+									};
+									int num_methods = sizeof(methods) / sizeof(ConfigMethod);
+									
+									for (int i = 0; i < num_methods; i++) {
+										if (meth & methods[i].bit) {
+											strcat(ap_cur->wps.selected_registrar_config_methods, methods[i].name);
+											strcat(ap_cur->wps.selected_registrar_config_methods, ", ");
+										}
+									}
+									
+									// Remove the trailing comma and space if any methods were added
+									size_t len = strlen(ap_cur->wps.selected_registrar_config_methods);
+									if (len >= 2) {
+										ap_cur->wps.selected_registrar_config_methods[len - 2] = '\0';
+									}
+								}
+							}
 							break;
 						default: // Unknown type-length-value
 							break;

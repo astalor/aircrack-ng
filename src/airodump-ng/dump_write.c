@@ -854,6 +854,11 @@ static int dump_write_kismet_netxml_client_info(struct ST_info * client,
 				client->gps_loc_best[1],
 				client->gps_loc_best[2]);
 	}
+	
+	
+	
+	
+	
 	fprintf(opt.f_kis_xml, "\t\t</wireless-client>\n");
 
 	return (0);
@@ -1174,7 +1179,198 @@ int dump_write_kismet_netxml(struct AP_info * ap_1st,
 		fprintf(opt.f_kis_xml,
 				"\t\t<cdp-device></cdp-device>\n"
 				"\t\t<cdp-portid></cdp-portid>\n");
+				
+				
+				
+		if (ap_cur->EAP_detected) {
+			fprintf(opt.f_kis_xml, "\t\t<eapol>true</eapol>\n");
+		}
+		
+		/* Manufacturer from WPS */
+        if (ap_cur->wps.device_manuf) {
+            char *manuf_sanitized = sanitize_xml((unsigned char *)ap_cur->wps.device_manuf, strlen(ap_cur->wps.device_manuf));
+            fprintf(opt.f_kis_xml,
+                    "\t\t<manufacturer>%s</manufacturer>\n",
+                    (manuf_sanitized != NULL) ? manuf_sanitized : "Unknown");
+            free(manuf_sanitized);
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<manufacturer>Unknown</manufacturer>\n");
+        }
 
+        /* Device Name */
+        if (ap_cur->wps.device_name) {
+            char *device_name_sanitized = sanitize_xml((unsigned char *)ap_cur->wps.device_name, strlen(ap_cur->wps.device_name));
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-name>%s</device-name>\n",
+                    (device_name_sanitized != NULL) ? device_name_sanitized : "Unknown");
+            free(device_name_sanitized);
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-name>Unknown</device-name>\n");
+        }
+
+        /* Device Password ID */
+        if (ap_cur->wps.device_password_id) {
+            char *password_id_sanitized = sanitize_xml((unsigned char *)ap_cur->wps.device_password_id, strlen(ap_cur->wps.device_password_id));
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-password-id>%s</device-password-id>\n",
+                    (password_id_sanitized != NULL) ? password_id_sanitized : "Unknown");
+            free(password_id_sanitized);
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-password-id>Unknown</device-password-id>\n");
+        }
+
+        /* Device Model */
+        if (ap_cur->wps.device_model) {
+            char *device_model_sanitized = sanitize_xml((unsigned char *)ap_cur->wps.device_model, strlen(ap_cur->wps.device_model));
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-model>%s</device-model>\n",
+                    (device_model_sanitized != NULL) ? device_model_sanitized : "Unknown");
+            free(device_model_sanitized);
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-model>Unknown</device-model>\n");
+        }
+
+        /* Device Model Number */
+        if (ap_cur->wps.device_model_number) {
+            char *model_number_sanitized = sanitize_xml((unsigned char *)ap_cur->wps.device_model_number, strlen(ap_cur->wps.device_model_number));
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-model-number>%s</device-model-number>\n",
+                    (model_number_sanitized != NULL) ? model_number_sanitized : "Unknown");
+            free(model_number_sanitized);
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-model-number>Unknown</device-model-number>\n");
+        }
+
+        /* Device Serial Number */
+        if (ap_cur->wps.device_serial_number) {
+            char *serial_number_sanitized = sanitize_xml((unsigned char *)ap_cur->wps.device_serial_number, strlen(ap_cur->wps.device_serial_number));
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-serial-number>%s</device-serial-number>\n",
+                    (serial_number_sanitized != NULL) ? serial_number_sanitized : "Unknown");
+            free(serial_number_sanitized);
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-serial-number>Unknown</device-serial-number>\n");
+        }
+
+        /* WPS Version */
+        if (ap_cur->wps.wps_version) {
+            char *wps_version_sanitized = sanitize_xml((unsigned char *)ap_cur->wps.wps_version, strlen(ap_cur->wps.wps_version));
+            fprintf(opt.f_kis_xml,
+                    "\t\t<wps-version>%s</wps-version>\n",
+                    (wps_version_sanitized != NULL) ? wps_version_sanitized : "Unknown");
+            free(wps_version_sanitized);
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<wps-version>Unknown</wps-version>\n");
+        }
+
+        /* Primary Device Type */
+        fprintf(opt.f_kis_xml,
+                "\t\t<primary-device-type category=\"%u\" subcategory=\"%u\" manufacturer-id=\"%u\" />\n",
+                ap_cur->wps.primary_device_category,
+                ap_cur->wps.primary_device_subcategory,
+                ap_cur->wps.primary_device_manufacturer_id);
+
+        /* Secondary Device Type */
+        fprintf(opt.f_kis_xml,
+                "\t\t<secondary-device-type category=\"%u\" subcategory=\"%u\" manufacturer-id=\"%u\" />\n",
+                ap_cur->wps.secondary_device_category,
+                ap_cur->wps.secondary_device_subcategory,
+                ap_cur->wps.secondary_device_manufacturer_id);
+
+        /* Config Methods */
+        if (ap_cur->wps.config_methods) {
+            char *config_methods_sanitized = sanitize_xml((unsigned char *)ap_cur->wps.config_methods, strlen(ap_cur->wps.config_methods));
+            fprintf(opt.f_kis_xml,
+                    "\t\t<config-methods>%s</config-methods>\n",
+                    (config_methods_sanitized != NULL) ? config_methods_sanitized : "Unknown");
+            free(config_methods_sanitized);
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<config-methods>Unknown</config-methods>\n");
+        }
+        /* UUID Registrar */
+        if (ap_cur->wps.uuid_registrar) {
+            char *uuid_sanitized = sanitize_xml((unsigned char *)ap_cur->wps.uuid_registrar, strlen(ap_cur->wps.uuid_registrar));
+            fprintf(opt.f_kis_xml,
+                    "\t\t<uuid-registrar>%s</uuid-registrar>\n",
+                    (uuid_sanitized != NULL) ? uuid_sanitized : "Unknown");
+            free(uuid_sanitized);
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<uuid-registrar>Unknown</uuid-registrar>\n");
+        }
+
+
+        /* Association State */
+        fprintf(opt.f_kis_xml,
+                "\t\t<association-state>%u</association-state>\n",
+                ap_cur->wps.association_state);
+
+        /* Configuration Error */
+        fprintf(opt.f_kis_xml,
+                "\t\t<configuration-error>%u</configuration-error>\n",
+                ap_cur->wps.config_error);
+
+        /* Public Key */
+        if (ap_cur->wps.public_key && ap_cur->wps.public_key_len > 0) {
+            // Represent as hexadecimal string
+            char *public_key_hex = malloc(ap_cur->wps.public_key_len * 2 + 1);
+            if (public_key_hex) {
+                for (size_t i = 0; i < ap_cur->wps.public_key_len; i++) {
+                    sprintf(&public_key_hex[i * 2], "%02X", ap_cur->wps.public_key[i]);
+                }
+                public_key_hex[ap_cur->wps.public_key_len * 2] = '\0';
+                char *public_key_sanitized = sanitize_xml((unsigned char *)public_key_hex, strlen(public_key_hex));
+                fprintf(opt.f_kis_xml,
+                        "\t\t<public-key>%s</public-key>\n",
+                        (public_key_sanitized != NULL) ? public_key_sanitized : "Unknown");
+                free(public_key_hex);
+                free(public_key_sanitized);
+            }
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<public-key>Unknown</public-key>\n");
+        }
+        /* Device Attributes */
+        if (ap_cur->wps.device_attributes && ap_cur->wps.device_attributes_len > 0) {
+            // Represent as hexadecimal string
+            char *attributes_hex = malloc(ap_cur->wps.device_attributes_len * 2 + 1);
+            if (attributes_hex) {
+                for (size_t i = 0; i < ap_cur->wps.device_attributes_len; i++) {
+                    sprintf(&attributes_hex[i * 2], "%02X", ap_cur->wps.device_attributes[i]);
+                }
+                attributes_hex[ap_cur->wps.device_attributes_len * 2] = '\0';
+                char *attributes_sanitized = sanitize_xml((unsigned char *)attributes_hex, strlen(attributes_hex));
+                fprintf(opt.f_kis_xml,
+                        "\t\t<device-attributes>%s</device-attributes>\n",
+                        (attributes_sanitized != NULL) ? attributes_sanitized : "Unknown");
+                free(attributes_hex);
+                free(attributes_sanitized);
+            }
+        }
+        else {
+            fprintf(opt.f_kis_xml,
+                    "\t\t<device-attributes>Unknown</device-attributes>\n");
+        }
+		
+		
 		/* Closing tag for the current wireless network */
 		fprintf(opt.f_kis_xml, "\t</wireless-network>\n");
 		//-------- End of XML
