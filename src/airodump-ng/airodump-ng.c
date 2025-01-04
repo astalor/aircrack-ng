@@ -2410,18 +2410,21 @@ skip_probe:
 						case 0x1021: // Manufacturer
 							if (sublen >= 3) {
 								free(ap_cur->wps.device_manuf); // Free previous allocation if any
+								ap_cur->wps.device_manuf = malloc(sublen - 1);
 								ap_cur->wps.device_manuf = extract_string(p + 4, sublen - 2);
 							}
 							break;
 						case 0x1023: // Model
 							if (sublen >= 3) {
 								free(ap_cur->wps.device_model); // Free previous allocation if any
+								ap_cur->wps.device_model = malloc(sublen - 1);
 								ap_cur->wps.device_model = extract_string(p + 4, sublen - 2);
 							}
 							break;
 						case 0x1024: // Model Number
 							if (sublen >= 3) {
 								free(ap_cur->wps.device_model_number); // Free previous allocation if any
+								ap_cur->wps.device_model_number = malloc(sublen - 1);
 								ap_cur->wps.device_model_number = extract_string(p + 4, sublen - 2);
 							}
 							break;
@@ -2430,12 +2433,14 @@ skip_probe:
 						case 0x1041: // Selected Registrar
 							if (sublen >= 3) { // Adjust length check based on actual data
 								free(ap_cur->selected_registrar); // Assuming you have this field in AP_info
+								ap_cur->selected_registrar = malloc(sublen - 1);
 								ap_cur->selected_registrar = extract_string(p + 4, sublen - 2);
 							}
 							break;
 						case 0x1042: // Serial Number
 							if (sublen >= 3) {
 								free(ap_cur->wps.device_serial_number); // Free previous allocation if any
+								ap_cur->wps.device_serial_number = malloc(sublen - 1);
 								ap_cur->wps.device_serial_number = extract_string(p + 4, sublen - 2);
 							}
 							break;
@@ -2530,55 +2535,53 @@ skip_probe:
 						case 0x1008: // Config Methods
 						case 0x1053: // Selected Registrar Config Methods
 							ap_cur->wps.meth = (p[4] << 8) + p[5];
-							
 							if (sublen >= 4) { // Ensure there are at least 2 bytes for config methods
 								// Extract the Config Methods bitmask (2 bytes, network byte order)
-								unsigned int s_reg_meth = (p[4] << 8) | p[5];
-								
-								// Convert the bitmask to a human-readable string
+								uint16_t meth = ap_cur->wps.meth;
+
+								// Allocate space for the human-readable string
 								free(ap_cur->wps.selected_registrar_config_methods); // Free previous allocation if any
 								ap_cur->wps.selected_registrar_config_methods = malloc(256); // Allocate sufficient space
-								if (ap_cur->wps.selected_registrar_config_methods) {
-									ap_cur->wps.selected_registrar_config_methods[0] = '\0'; // Initialize as empty string
-									uint16_t meth = s_reg_meth;
-									
-									// Define supported config methods based on WPS specification
-									typedef struct {
-										uint16_t bit;
-										const char *name;
-									} ConfigMethod;
-									
-									ConfigMethod methods[] = {
-										{ 0x0001, "Physical Push Button" },
-										{ 0x0002, "Physical Push Button Config" },
-										{ 0x0004, "Electronic Push Button" },
-										{ 0x0008, "Keypad" },
-										{ 0x0010, "Display" },
-										{ 0x0020, "Extensible Display" },
-										{ 0x0040, "Label" },
-										{ 0x0080, "Out of Band" },
-										{ 0x0100, "NFC Interface" },
-										{ 0x0200, "USB Interface" },
-										{ 0x0400, "Near Field Communication (NFC)" },
-										{ 0x0800, "PIN Display" },
-										// Add more methods as defined in the WPS spec if needed
-									};
-									int num_methods = sizeof(methods) / sizeof(ConfigMethod);
-									
-									for (int i = 0; i < num_methods; i++) {
-										if (meth & methods[i].bit) {
-											strcat(ap_cur->wps.selected_registrar_config_methods, methods[i].name);
-											strcat(ap_cur->wps.selected_registrar_config_methods, ", ");
+								if (!ap_cur->wps.selected_registrar_config_methods) {
+									break; // Memory allocation failed; skip processing
+								}
+
+								ap_cur->wps.selected_registrar_config_methods[0] = '\0'; // Initialize as empty string
+
+								// Define supported config methods based on WPS specification
+								typedef struct {
+									uint16_t bit;
+									const char *name;
+								} ConfigMethod;
+
+								ConfigMethod methods[] = {
+									{ 0x0001, "Physical Push Button" },
+									{ 0x0002, "Ethernet" },
+									{ 0x0004, "Label" },
+									{ 0x0008, "Display" },
+									{ 0x0010, "Extensible Display" },
+									{ 0x0020, "Out of Band" },
+									{ 0x0040, "NFC Interface" },
+									{ 0x0080, "Keypad" },
+									{ 0x0100, "USB Interface" },
+									{ 0x0200, "Near Field Communication (NFC)" },
+									{ 0x0400, "PIN Display" },
+									// Add more methods as defined in the WPS spec if needed
+								};
+
+								int num_methods = sizeof(methods) / sizeof(ConfigMethod);
+
+								// Build the human-readable string
+								for (int i = 0; i < num_methods; i++) {
+									if (meth & methods[i].bit) {
+										if (strlen(ap_cur->wps.selected_registrar_config_methods) > 0) {
+											strlcat(ap_cur->wps.selected_registrar_config_methods, ", ", 256);
 										}
-									}
-									
-									// Remove the trailing comma and space if any methods were added
-									size_t len = strlen(ap_cur->wps.selected_registrar_config_methods);
-									if (len >= 2) {
-										ap_cur->wps.selected_registrar_config_methods[len - 2] = '\0';
+										strlcat(ap_cur->wps.selected_registrar_config_methods, methods[i].name, 256);
 									}
 								}
 							}
+							
 							break;
 						default: // Unknown type-length-value
 							// Optionally store unknown subtypes for further analysis
@@ -2601,6 +2604,7 @@ skip_probe:
 				p += length + 2;
 		}
 	}
+	
 
 	/* packet parsing: Authentication Response */
 

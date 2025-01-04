@@ -660,6 +660,23 @@ char * get_manufacturer_from_string(char * buffer)
 	return (manuf);
 }
 
+void append_hex_string(const unsigned char *data, size_t length, char **output) {
+    size_t needed_length = (length * 2) + 1; // 2 characters per byte + null terminator
+    char *hex_string = malloc(needed_length);
+    if (!hex_string) {
+        perror("malloc failed");
+        return;
+    }
+    
+    for (size_t i = 0; i < length; i++) {
+        snprintf(&hex_string[i * 2], 3, "%02X", data[i]);
+    }
+    hex_string[needed_length - 1] = '\0'; // Null terminate the string
+    
+    *output = hex_string;
+}
+
+
 #define KISMET_NETXML_HEADER_BEGIN                                             \
 	"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<!DOCTYPE "              \
 	"detection-run SYSTEM "                                                    \
@@ -858,9 +875,16 @@ static int dump_write_kismet_netxml_client_info(struct ST_info * client,
 	
 	
 	if (client->ie_data) {
-		fprintf(opt.f_kis_xml,
-				"\t\t\t<ie-data>%s</ie-data>\n",
-				sanitize_xml((unsigned char *)client->ie_data, strlen(client->ie_data)));
+		// Convert the IE data to a hex string
+		char *decoded_ie_data = NULL;
+		append_hex_string((unsigned char *)client->ie_data, strlen(client->ie_data), &decoded_ie_data);
+
+		if (decoded_ie_data) {
+			fprintf(opt.f_kis_xml,
+					"\t\t\t<ie-data>%s</ie-data>\n",
+					decoded_ie_data);
+			free(decoded_ie_data);
+		}
 	}
 	
 	if (client->PMKID_detected) {
@@ -1193,10 +1217,63 @@ int dump_write_kismet_netxml(struct AP_info * ap_1st,
 				"\t\t<cdp-device></cdp-device>\n"
 				"\t\t<cdp-portid></cdp-portid>\n");
 				
-				
-				
 		if (ap_cur->EAP_detected) {
 			fprintf(opt.f_kis_xml, "\t\t<eapol>true</eapol>\n");
+		}
+
+		if (ap_cur->wps.selected_registrar_config_methods) {
+			char *sanitized_config_methods = sanitize_xml(
+				(unsigned char *)ap_cur->wps.selected_registrar_config_methods,
+				strlen(ap_cur->wps.selected_registrar_config_methods));
+			if (sanitized_config_methods) {
+				fprintf(opt.f_kis_xml,
+						"\t\t<selected-registrar-config-methods>%s</selected-registrar-config-methods>\n",
+						sanitized_config_methods);
+				free(sanitized_config_methods);
+			}
+		}
+		
+		
+		if (ap_cur->wps.meth) // WPS Config Methods
+		{
+			char tbuf[256]; // Adjust size if needed
+			memset(tbuf, '\0', sizeof(tbuf));
+			int sep = 0;
+
+		#define T(bit, name)                                                           \
+			do                                                                         \
+			{                                                                          \
+				if (ap_cur->wps.meth & (1u << (bit)))                                  \
+				{                                                                      \
+					if (sep) strlcat(tbuf, ",", sizeof(tbuf));                         \
+					sep = 1;                                                           \
+					strlcat(tbuf, (name), sizeof(tbuf));                               \
+				}                                                                      \
+			} while (0)
+
+			T(0u, "USB");        // USB method
+			T(1u, "ETHER");      // Ethernet
+			T(2u, "LABEL");        // Label
+			T(3u, "DISPLAY");       // Display
+			T(4u, "EXT_NFC");     // Ext. NFC Token
+			T(5u, "INT_NFC");     // Int. NFC Token
+			T(6u, "NFC_INTERFACE");    // NFC Interface
+			T(7u, "PUSH_BUTTON");        // Push Button
+			T(8u, "KEYPAD");       // Keypad
+		#undef T
+
+			// Add the WPS Config Methods to the XML output
+			if (strlen(tbuf) > 0)
+			{
+				char *sanitized_tbuf = sanitize_xml((unsigned char *)tbuf, strlen(tbuf));
+				if (sanitized_tbuf)
+				{
+					fprintf(opt.f_kis_xml,
+							"\t\t<wps-config-methods>%s</wps-config-methods>\n",
+							sanitized_tbuf);
+					free(sanitized_tbuf);
+				}
+			}
 		}
 
 
