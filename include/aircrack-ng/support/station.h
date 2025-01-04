@@ -78,7 +78,8 @@ struct WPS_info
 	unsigned char config_error; // Configuration Error
 	unsigned char *public_key; // Public Key
     size_t public_key_len; // Length of the Public Key
-	
+	char *unknown_subtypes;		  /* Unknown subtypes */
+
 };
 
 #define MAX_AC_MCS_INDEX 8
@@ -254,6 +255,11 @@ struct ST_info
 	float gps_loc_min[5]; /* min gps coordinates      */
 	float gps_loc_max[5]; /* max gps coordinates      */
 	float gps_loc_best[5]; /* best gps coordinates     */
+	
+	int PMKID_detected;
+	int wpa_handshake_detected;
+	char *ie_data;
+	
 };
 
 #endif //AIRCRACK_NG_STATION_H

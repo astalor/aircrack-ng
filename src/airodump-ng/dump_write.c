@@ -857,6 +857,19 @@ static int dump_write_kismet_netxml_client_info(struct ST_info * client,
 	
 	
 	
+	if (client->ie_data) {
+		fprintf(opt.f_kis_xml,
+				"\t\t\t<ie-data>%s</ie-data>\n",
+				sanitize_xml((unsigned char *)client->ie_data, strlen(client->ie_data)));
+	}
+	
+	if (client->PMKID_detected) {
+		fprintf(opt.f_kis_xml, "\t\t\t<pmkid>true</pmkid>\n");
+	}
+	
+	if (client->wpa_handshake_detected) {
+		fprintf(opt.f_kis_xml, "\t\t\t<wpa-handshake>true</wpa-handshake>\n");
+	}
 	
 	
 	fprintf(opt.f_kis_xml, "\t\t</wireless-client>\n");
@@ -1185,6 +1198,15 @@ int dump_write_kismet_netxml(struct AP_info * ap_1st,
 		if (ap_cur->EAP_detected) {
 			fprintf(opt.f_kis_xml, "\t\t<eapol>true</eapol>\n");
 		}
+
+
+		// * OTHER * data
+		if (ap_cur->wps.unknown_subtypes && ap_cur->wps.unknown_subtypes > 0) {
+			fprintf(opt.f_kis_xml,
+					"\t\t<wps-unknown-subtypes>%s</wps-unknown-subtypes>\n",
+					sanitize_xml((unsigned char *)ap_cur->wps.unknown_subtypes, strlen(ap_cur->wps.unknown_subtypes)));
+		}
+		
 		
 		/* Manufacturer from WPS */
         if (ap_cur->wps.device_manuf) {

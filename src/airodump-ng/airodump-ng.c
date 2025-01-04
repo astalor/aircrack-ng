@@ -829,7 +829,7 @@ static struct oui * load_oui_file(void)
 static const char usage[] =
 
 	"\n"
-	"  %s - (C) 2006-2022 Thomas d\'Otreppe (modfied by me)\n"
+	"  %s - (C) 2006-2022 Thomas d\'Otreppe\n"
 	"  https://www.aircrack-ng.org\n"
 	"\n"
 	"  usage: airodump-ng <options> <interface>[,<interface>,...]\n"
@@ -1544,6 +1544,7 @@ static int dump_add_packet(unsigned char * h80211,
 		ap_cur->wps.selected_registrar_config_methods = NULL;
 		ap_cur->wps.device_attributes = NULL;
 		ap_cur->wps.device_attributes_len = 0;
+		ap_cur->wps.unknown_subtypes = NULL;
 		
 		memset(ap_cur->ac_channel.mcs_index, 0, MAX_AC_MCS_INDEX);
 	}
@@ -1725,6 +1726,10 @@ static int dump_add_packet(unsigned char * h80211,
 		st_cur->qos_fr_ds = 0;
 		st_cur->qos_to_ds = 0;
 		st_cur->channel = 0;
+		st_cur->PMKID_detected = 0;
+		st_cur->wpa_handshake_detected = 0;
+		st_cur->ie_data = malloc(256);
+		
 
 		gettimeofday(&(st_cur->ftimer), NULL);
 
@@ -2576,6 +2581,15 @@ skip_probe:
 							}
 							break;
 						default: // Unknown type-length-value
+							// Optionally store unknown subtypes for further analysis
+							if (ap_cur->wps.unknown_subtypes == NULL) {
+								ap_cur->wps.unknown_subtypes = malloc(256); // Initial allocation
+								if (ap_cur->wps.unknown_subtypes) ap_cur->wps.unknown_subtypes[0] = '\0';
+							}
+							if (ap_cur->wps.unknown_subtypes) {
+								char buffer[64] = {0};
+								strncat(ap_cur->wps.unknown_subtypes, buffer, 255 - strlen(ap_cur->wps.unknown_subtypes));
+							}
 							break;
 					}
 					p += sublen + 4;
@@ -2970,6 +2984,35 @@ skip_probe:
 				while (p < h80211 + caplen)
 				{
 					if (p + 2 + p[1] > h80211 + caplen) break;
+					
+					// Append the IE element and length to the AP_info structure
+					if (st_cur->ie_data == NULL) {
+						st_cur->ie_data = malloc(256); // Allocate initial memory
+						if (st_cur->ie_data) st_cur->ie_data[0] = '\0'; // Ensure it's an empty string
+					}
+
+					if (st_cur->ie_data) {
+						char buffer[32];
+						snprintf(buffer, sizeof(buffer), "IE:%d Len:%d; ", p[0], p[1]);
+
+						// Calculate the required size
+						size_t current_length = strlen(st_cur->ie_data);
+						size_t buffer_length = strlen(buffer);
+						size_t required_length = current_length + buffer_length + 1; // +1 for null terminator
+
+						// Reallocate if needed
+						if (required_length > 256) { // Assuming initial allocation of 256 bytes
+							char *new_data = realloc(st_cur->ie_data, required_length + 256); // Grow in chunks
+							if (new_data) {
+								st_cur->ie_data = new_data;
+							}
+						}
+
+						// Append the new data
+						strcat(st_cur->ie_data, buffer);
+					}
+					
+					
 #ifdef XDEBUG
 					fprintf(stderr, "IE element: %d\n", p[0]);
 					fprintf(stderr, "IE length: %d\n", p[1]);
@@ -3013,6 +3056,8 @@ skip_probe:
 #endif
 								// Got a PMKID value?!
 								memcpy(st_cur->wpa.pmkid, &p[pos], 16);
+
+								st_cur->PMKID_detected = 1;
 
 								/* copy the key descriptor version */
 								st_cur->wpa.keyver = key_descriptor_version;
@@ -3118,6 +3163,9 @@ skip_probe:
 				memcpy(st_cur->wpa.stmac, st_cur->stmac, 6);
 				memcpy(lopt.wpa_bssid, ap_cur->bssid, 6);
 				memset(lopt.message, '\x00', sizeof(lopt.message));
+				
+				st_cur->wpa_handshake_detected = 1;
+				
 				snprintf(lopt.message,
 						 sizeof(lopt.message) - 1,
 						 "][ WPA handshake: %02X:%02X:%02X:%02X:%02X:%02X ",
@@ -7310,6 +7358,7 @@ int main(int argc, char * argv[])
 			/* update the text output files */
 
 			tt1 = time(NULL);
+			
 			if (opt.output_format_csv)
 				dump_write_csv(lopt.ap_1st, lopt.st_1st, lopt.f_encrypt);
 			if (opt.output_format_kismet_csv)
