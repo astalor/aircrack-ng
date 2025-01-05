@@ -2394,7 +2394,7 @@ skip_probe:
 						case 0x1011: // Device Name
 						if (sublen >= 3) { // Length includes Type and Length fields
 							free(ap_cur->wps.device_name); // Free previous allocation if any
-							ap_cur->wps.device_name = extract_string(p + 4, sublen - 2);
+							ap_cur->wps.device_name = extract_string(p + 4, sublen);
 						}
 							break;
 						case 0x1012: // Device Password ID
@@ -2411,21 +2411,21 @@ skip_probe:
 							if (sublen >= 3) {
 								free(ap_cur->wps.device_manuf); // Free previous allocation if any
 								ap_cur->wps.device_manuf = malloc(sublen - 1);
-								ap_cur->wps.device_manuf = extract_string(p + 4, sublen - 2);
+								ap_cur->wps.device_manuf = extract_string(p + 4, sublen);
 							}
 							break;
 						case 0x1023: // Model
 							if (sublen >= 3) {
 								free(ap_cur->wps.device_model); // Free previous allocation if any
 								ap_cur->wps.device_model = malloc(sublen - 1);
-								ap_cur->wps.device_model = extract_string(p + 4, sublen - 2);
+								ap_cur->wps.device_model = extract_string(p + 4, sublen);
 							}
 							break;
 						case 0x1024: // Model Number
 							if (sublen >= 3) {
 								free(ap_cur->wps.device_model_number); // Free previous allocation if any
 								ap_cur->wps.device_model_number = malloc(sublen - 1);
-								ap_cur->wps.device_model_number = extract_string(p + 4, sublen - 2);
+								ap_cur->wps.device_model_number = extract_string(p + 4, sublen);
 							}
 							break;
 						case 0x103b: // Response Type
@@ -2434,14 +2434,14 @@ skip_probe:
 							if (sublen >= 3) { // Adjust length check based on actual data
 								free(ap_cur->selected_registrar); // Assuming you have this field in AP_info
 								ap_cur->selected_registrar = malloc(sublen - 1);
-								ap_cur->selected_registrar = extract_string(p + 4, sublen - 2);
+								ap_cur->selected_registrar = extract_string(p + 4, sublen);
 							}
 							break;
 						case 0x1042: // Serial Number
 							if (sublen >= 3) {
 								free(ap_cur->wps.device_serial_number); // Free previous allocation if any
 								ap_cur->wps.device_serial_number = malloc(sublen - 1);
-								ap_cur->wps.device_serial_number = extract_string(p + 4, sublen - 2);
+								ap_cur->wps.device_serial_number = extract_string(p + 4, sublen);
 							}
 							break;
 						case 0x1043: // UUID Registrar
