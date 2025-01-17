@@ -1469,7 +1469,7 @@ int dump_write_kismet_netxml(struct AP_info * ap_1st,
                     "\t\t<device-attributes>Unknown</device-attributes>\n");
         }
 		
-		fprintf(opt.f_kis_xml, "\t\t<wps-ad-version>%d</wps-ad-version>\n", ap_cur->wps.version);
+		fprintf(opt.f_kis_xml, "\t\t<wps-ad-version>%d</wps-ad-version>\n", (ap_cur->wps.version >> 4));
 		fprintf(opt.f_kis_xml, "\t\t<wps-ad-locked>%d</wps-ad-locked>\n", ap_cur->wps.ap_setup_locked);
 		
 		/* Closing tag for the current wireless network */
